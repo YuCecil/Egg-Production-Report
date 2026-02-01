@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>牧場營運報表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+            color: #334155;
+        }
+
+        .no-select {
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .active-scale:active {
+            transform: scale(0.99);
+            transition: transform 0.1s;
+        }
+
+        /* 日期選擇器樣式 */
+        input[type="date"] {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 0.95rem;
+            outline: none;
+            font-family: 'Noto Sans TC', sans-serif;
+            text-align: center;
+            width: 130px;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.8;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+
+<body class="no-select pb-10">
+
+    <header class="bg-slate-800 text-white sticky top-0 z-50 shadow-md border-b border-slate-700">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center">
+                <i class="fa-solid fa-egg mr-2 text-blue-200 text-xl"></i>
+                <h1 class="text-xl font-bold tracking-wide hidden sm:block">牧場報表</h1>
+                <h1 class="text-lg font-bold tracking-wide sm:hidden">報表</h1>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div class="flex items-center bg-slate-700 rounded-lg p-0.5 border border-slate-600">
+                    <button onclick="changeDate(-1)"
+                        class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-600 rounded active:scale-90 transition-all">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <input type="date" id="date-picker" onchange="handleDateChange(this.value)"
+                        class="bg-transparent border-none text-center h-8 focus:ring-0">
+                    <button onclick="changeDate(1)"
+                        class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-600 rounded active:scale-90 transition-all">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <button onclick="refreshData()"
+                    class="w-8 h-8 bg-slate-700 rounded-lg border border-slate-600 flex items-center justify-center text-blue-200 hover:bg-slate-600 active:rotate-180 transition-all shadow-sm">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+
+                <div id="user-badge"
+                    class="hidden md:block text-sm font-bold bg-slate-900 px-3 py-1.5 rounded text-slate-300 border border-slate-700 shadow-inner">
+                    --
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="view-home" class="container mx-auto px-3 mt-4 transition-opacity duration-300">
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="p-6 text-center border-b border-slate-100 bg-gradient-to-b from-blue-50/30 to-white">
+                <div class="text-blue-800 text-base font-bold tracking-wider mb-2 uppercase">今日全場總產量</div>
+                <div class="flex justify-center items-baseline">
+                    <span class="text-7xl font-black text-blue-900 tracking-tighter" id="total-harvest">--</span>
+                    <span class="text-2xl text-blue-700 ml-2 font-bold">箱</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
+                <div class="p-4 flex flex-col items-center justify-center bg-emerald-50/30">
+                    <div class="text-slate-500 text-sm font-bold mb-1">預估營收</div>
+                    <div class="flex items-baseline">
+                        <span class="text-2xl font-black text-emerald-600" id="total-income">--</span>
+                        <span class="text-sm text-emerald-500 ml-1 font-bold">元</span>
+                    </div>
+                </div>
+                <div class="p-4 flex flex-col items-center justify-center">
+                    <div class="text-slate-500 text-sm font-bold mb-1">今日產地價(箱)</div>
+                    <div class="flex items-baseline">
+                        <span class="text-2xl font-black text-slate-700" id="price-per-box">--</span>
+                        <span class="text-sm text-slate-500 ml-1">/箱</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 flex justify-between items-center px-6">
+                <div class="flex items-center">
+                    <span class="text-xl mr-2">🐔</span>
+                    <span class="text-base font-bold text-slate-600">目前雞隻總數</span>
+                </div>
+                <div class="flex items-baseline">
+                    <span class="text-xl font-black text-slate-700" id="total-chickens">--</span>
+                    <span class="text-base font-bold text-rose-500 ml-2" id="total-death-change">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="bg-orange-50 px-4 py-2 border-b border-orange-100 flex justify-between items-center">
+                <span class="text-orange-800 text-sm font-bold tracking-wider">每日耗損紀錄</span>
+                <i class="fa-solid fa-clipboard-list text-orange-300"></i>
+            </div>
+            <div class="grid grid-cols-2 divide-x divide-slate-100 p-4">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="text-slate-500 text-base font-bold mb-1"><i
+                            class="fa-solid fa-bucket mr-1 text-blue-300"></i>水蛋</div>
+                    <div class="flex items-baseline">
+                        <span class="text-3xl font-black text-slate-700" id="total-watery">--</span>
+                        <span class="text-sm text-slate-400 ml-1 font-bold">箱</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center justify-center">
+                    <div class="text-slate-500 text-base font-bold mb-1"><span class="mr-1">🍳</span>破蛋</div>
+                    <div class="flex items-baseline">
+                        <span class="text-3xl font-black text-slate-700" id="total-broken">--</span>
+                        <span class="text-sm text-slate-400 ml-1 font-bold">箱</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center mb-3 px-1">
+            <div class="w-1.5 h-6 bg-blue-700 rounded-r mr-2"></div>
+            <h2 class="text-xl font-black text-slate-700">區域概況</h2>
+        </div>
+
+        <div id="zone-cards-container" class="space-y-3">
+            <div class="text-center py-10 text-slate-400">
+                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>資料讀取中...</p>
+            </div>
+        </div>
+    </main>
+
+    <main id="view-detail" class="hidden container mx-auto px-3 mt-4 transition-opacity duration-300 pb-20">
+        <div
+            class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-600 mb-4 flex justify-between items-center sticky top-[64px] z-40">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight" id="detail-title">--</h2>
+                <div class="text-sm text-slate-500 font-bold mt-1" id="detail-subtitle">--</div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-slate-500 font-bold mb-1">本區產量</div>
+                <div class="flex items-baseline justify-end">
+                    <span class="text-4xl font-black text-blue-800 leading-none" id="detail-harvest">--</span>
+                    <span class="text-base text-blue-600 font-bold ml-1">箱</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="detail-content" class="space-y-5">
+        </div>
+
+        <button onclick="showHome()"
+            class="w-full mt-8 bg-white text-slate-600 py-4 rounded-xl font-bold text-xl active-scale shadow-sm border border-slate-300 flex justify-center items-center hover:bg-slate-50 hover:text-blue-700 transition-colors">
+            返回總覽
+        </button>
+    </main>
+
+    <script>
+        // ---------------------------------------------------------
+        // 重要設定：請填入 GAS 部署後的 Web App URL
+        // ---------------------------------------------------------
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzVzi0amrIADXJ-i_We8_de75TPbXJLH-fSynLQuVHk-m14LFfWVeY14pWoGnlRZW6C/exec";
+
+        // ---------------------------------------------------------
+        // 視圖與工具函數
+        // ---------------------------------------------------------
+        function showHome() {
+            document.getElementById('view-home').classList.remove('hidden');
+            document.getElementById('view-detail').classList.add('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function showDetail(sectionIndex) {
+            const section = window.currentData.sections[sectionIndex];
+            renderDetailContent(section);
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-detail').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function formatNumber(num) {
+            if (num === "-" || num === null || num === undefined) return "-";
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function getRateColor(rate) {
+            if (rate === "-" || rate === null) return 'text-slate-500';
+            if (rate >= 80) return 'text-blue-600';
+            return 'text-slate-500';
+        }
+
+        function refreshData() {
+            const currentDate = document.getElementById('date-picker').value;
+            // 點擊重新整理按鈕時，清除該日期的快取
+            clearCache(currentDate);
+            handleDateChange(currentDate);
+        }
+
+        function changeDate(offset) {
+            const datePicker = document.getElementById('date-picker');
+            if (!datePicker.value) return;
+
+            const currentDate = new Date(datePicker.value);
+            currentDate.setDate(currentDate.getDate() + offset);
+
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const newDateStr = `${year}-${month}-${day}`;
+
+            datePicker.value = newDateStr;
+            handleDateChange(newDateStr);
+        }
+
+        function getTodayString() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // ---------------------------------------------------------
+        // 快取機制 (新增)
+        // ---------------------------------------------------------
+        function getCache(dateStr) {
+            const key = 'farm_report_' + dateStr;
+            const cached = sessionStorage.getItem(key);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+            return null;
+        }
+
+        function setCache(dateStr, data) {
+            const key = 'farm_report_' + dateStr;
+            try {
+                sessionStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Cache storage full or disabled');
+            }
+        }
+
+        function clearCache(dateStr) {
+            const key = 'farm_report_' + dateStr;
+            sessionStorage.removeItem(key);
+        }
+
+        // ---------------------------------------------------------
+        // 資料讀取與載入動畫 (改為 Fetch API)
+        // ---------------------------------------------------------
+        function handleDateChange(dateStr) {
+            // 1. 讓下半部 (區域列表) 顯示大轉圈圈
+            document.getElementById('zone-cards-container').innerHTML = `
+                <div class="text-center py-10 text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>資料讀取中...</p>
+                </div>
+            `;
+
+            // 2. 讓上半部所有核心數據也變成轉圈圈 (避免顯示舊資料)
+            const loadingIcon = '<i class="fa-solid fa-spinner fa-spin text-slate-300 text-base"></i>';
+            const idsToReset = [
+                'total-harvest',      // 總產量
+                'total-income',       // 預估營收
+                'price-per-box',      // 產地價
+                'total-chickens',     // 雞隻總數
+                'total-death-change', // 死亡變動
+                'total-watery',       // 水蛋
+                'total-broken'        // 破蛋
+            ];
+
+            idsToReset.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerHTML = loadingIcon;
+                    if (id === 'total-death-change') el.className = "ml-2";
+                }
+            });
+
+            // 3. 呼叫資料載入
+            loadData(dateStr);
+        }
+
+        function loadData(dateStr) {
+            // A. 先檢查前端快取
+            const cachedData = getCache(dateStr);
+            if (cachedData) {
+                console.log("使用前端快取資料:", cachedData);
+                renderDashboard(cachedData);
+                return;
+            }
+
+            // B. 若無快取，則呼叫後端
+            if (GAS_API_URL === "您的GAS網頁應用程式網址(請填入)") {
+                alert("請先在程式碼中設定 GAS_API_URL！");
+                return;
+            }
+
+            const requestDate = dateStr;
+            const url = `${GAS_API_URL}?date=${dateStr}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // 防呆檢查：確認回傳資料是否等於當下選擇器的日期
+                    const currentPickerValue = document.getElementById('date-picker').value;
+
+                    if (requestDate !== currentPickerValue) {
+                        console.warn(`捨棄過期資料: 請求=${requestDate}, 目前畫面=${currentPickerValue}`);
+                        return; // 這是舊資料，不要渲染
+                    }
+
+                    if (data.error) {
+                        alert("後端錯誤: " + data.error);
+                        return;
+                    }
+
+                    console.log("收到後端資料:", data);
+
+                    // 寫入前端快取
+                    setCache(dateStr, data);
+
+                    renderDashboard(data);
+                })
+                .catch(error => {
+                    alert("連線失敗: " + error.message);
+                });
+        }
+
+        // ---------------------------------------------------------
+        // 渲染主畫面
+        // ---------------------------------------------------------
+        function renderDashboard(data) {
+            window.currentData = data;
+            document.getElementById('user-badge').textContent = data.user;
+
+            document.getElementById('total-harvest').textContent = formatNumber(data.summary.totalHarvest);
+            document.getElementById('total-income').textContent = formatNumber(data.summary.expectedIncome);
+            document.getElementById('price-per-box').textContent = data.summary.pricePerBox === "-" ? "-" : `$${data.summary.pricePerBox}`;
+            document.getElementById('total-chickens').textContent = formatNumber(data.summary.totalChickens);
+
+            document.getElementById('total-watery').textContent = formatNumber(data.summary.totalWatery);
+            document.getElementById('total-broken').textContent = formatNumber(data.summary.totalBroken);
+
+            const deathCount = data.summary.totalDeath;
+            const deathEl = document.getElementById('total-death-change');
+            if (deathCount > 0) {
+                deathEl.textContent = `(-${deathCount})`;
+                deathEl.className = "text-base font-bold text-rose-500 ml-2";
+            } else {
+                deathEl.textContent = `(-0)`;
+                deathEl.className = "text-base font-bold text-slate-300 ml-2";
+            }
+
+            const zoneContainer = document.getElementById('zone-cards-container');
+            zoneContainer.innerHTML = '';
+
+            if (!data.sections || data.sections.length === 0) {
+                zoneContainer.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 bg-slate-100 rounded-xl border border-dashed border-slate-300">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                        <p class="font-bold text-lg">該日期尚無紀錄</p>
+                        <p class="text-sm mt-1">請選擇其他日期</p>
+                    </div>
+                `;
+                // 無資料時，數字歸零
+                document.getElementById('total-harvest').textContent = "0";
+                document.getElementById('total-watery').textContent = "0";
+                document.getElementById('total-broken').textContent = "0";
+                return;
+            }
+
+            data.sections.forEach((section, index) => {
+                const sectionHarvest = section.rows.reduce((sum, row) => sum + (typeof row.harvest === 'number' ? row.harvest : 0), 0);
+                const sectionDeath = section.rows.reduce((sum, row) => sum + (typeof row.death === 'number' ? row.death : 0), 0);
+                const hasDeath = sectionDeath > 0;
+                const deathText = hasDeath ? `(-${sectionDeath})` : '';
+                const deathClass = hasDeath ? 'text-rose-500' : 'text-slate-300';
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-lg shadow-sm p-5 border-l-4 border-blue-500 active-scale cursor-pointer flex justify-between items-center relative`;
+                card.onclick = () => showDetail(index);
+
+                card.innerHTML = `
+                    <div class="z-10 flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mr-4 text-blue-500">
+                            <i class="fa-solid fa-warehouse text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center">
+                                <h3 class="text-xl font-black text-slate-800 mr-2">${section.name}</h3>
+                                <span class="text-sm font-bold ${deathClass}">${deathText}</span>
+                            </div>
+                            <div class="text-sm text-slate-400 font-bold mt-0.5">${section.subtext}</div>
+                        </div>
+                    </div>
+                    <div class="z-10 text-right pr-2">
+                        <div class="flex items-baseline justify-end">
+                            <span class="text-4xl font-black text-blue-800">${sectionHarvest}</span>
+                            <span class="text-sm text-blue-400 font-bold ml-1">箱</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-200 text-lg absolute right-3"></i>
+                `;
+                zoneContainer.appendChild(card);
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 渲染詳細頁
+        // ---------------------------------------------------------
+        function renderDetailContent(section) {
+            document.getElementById('detail-title').textContent = section.name;
+            document.getElementById('detail-subtitle').textContent = section.subtext;
+            const sectionHarvest = section.rows.reduce((sum, row) => sum + (typeof row.harvest === 'number' ? row.harvest : 0), 0);
+            document.getElementById('detail-harvest').textContent = sectionHarvest;
+
+            const container = document.getElementById('detail-content');
+            container.innerHTML = '';
+
+            let currentBatchDays = null;
+            let currentBatchRows = [];
+
+            const renderBatch = () => {
+                if (currentBatchRows.length === 0) return;
+                const batchHarvest = currentBatchRows.reduce((s, r) => s + (typeof r.harvest === 'number' ? r.harvest : 0), 0);
+                const days = currentBatchRows[0].days;
+                const weeks = currentBatchRows[0].weeks;
+
+                let totalChickens = 0;
+                let weightedRateSum = 0;
+                let validDataCount = 0;
+
+                currentBatchRows.forEach(r => {
+                    if (typeof r.chickens === 'number' && typeof r.rate === 'number') {
+                        totalChickens += r.chickens;
+                        weightedRateSum += (r.rate * r.chickens);
+                        validDataCount++;
+                    }
+                });
+
+                let batchAvgRate = "-";
+                if (validDataCount > 0 && totalChickens > 0) {
+                    batchAvgRate = (weightedRateSum / totalChickens).toFixed(1);
+                }
+
+                const batchRateColor = getRateColor(batchAvgRate === "-" ? "-" : parseFloat(batchAvgRate));
+                const rateDisplay = batchAvgRate === "-" ? "-" : `${batchAvgRate}%`;
+                const dateText = (days === "-" || days === null) ? "雞齡未知" : `${weeks}週 (${days}天)`;
+
+                const batchEl = document.createElement('div');
+                batchEl.className = 'bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden';
+                batchEl.innerHTML = `
+                    <div class="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+                        <div class="flex items-center">
+                            <span class="font-bold text-base">${dateText}</span>
+                            <span class="mx-2 text-slate-500">|</span>
+                            <span class="text-sm text-slate-300">
+                                平均產蛋 <span class="${batchRateColor.replace('text-', 'text-')} font-bold">${rateDisplay}</span>
+                            </span>
+                        </div>
+                        <div class="text-sm font-bold bg-slate-700 px-3 py-1 rounded">共 ${batchHarvest} 箱</div>
+                    </div>
+                `;
+
+                currentBatchRows.forEach((row, idx) => {
+                    const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+                    const borderClass = idx === currentBatchRows.length - 1 ? '' : 'border-b border-slate-100';
+                    const rateColorClass = getRateColor(row.rate);
+                    const deathDisplay = (typeof row.death === 'number' && row.death > 0) ? `<span class="text-rose-500 font-bold text-base">(-${row.death})</span>` : '';
+                    const rowRateDisplay = row.rate === "-" ? "-" : `${row.rate}%`;
+
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = `p-5 ${rowBg} ${borderClass}`;
+                    rowDiv.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="w-1/3">
+                                <div class="text-2xl font-black text-slate-700">${row.name}</div>
+                                <div class="mt-1">${deathDisplay}</div>
+                            </div>
+                            <div class="w-1/3 text-center border-l border-r border-slate-100">
+                                <div class="text-xs text-slate-400 font-bold uppercase mb-0.5">Rate</div>
+                                <div class="text-xl font-black ${rateColorClass}">${rowRateDisplay}</div>
+                            </div>
+                            <div class="w-1/3 text-right">
+                                <div class="text-4xl font-black text-blue-800">${row.harvest}</div>
+                                <div class="text-sm text-blue-300 font-bold">箱</div>
+                            </div>
+                        </div>
+                    `;
+                    batchEl.appendChild(rowDiv);
+                });
+                container.appendChild(batchEl);
+            };
+
+            if (section.rows.length > 0) {
+                currentBatchDays = section.rows[0].days;
+            }
+            section.rows.forEach(row => {
+                if (row.days !== currentBatchDays) {
+                    renderBatch();
+                    currentBatchRows = [];
+                    currentBatchDays = row.days;
+                }
+                currentBatchRows.push(row);
+            });
+            renderBatch();
+        }
+
+        // ---------------------------------------------------------
+        // 啟動邏輯
+        // ---------------------------------------------------------
+        window.onload = function () {
+            const todayStr = getTodayString();
+            document.getElementById('date-picker').value = todayStr;
+            handleDateChange(todayStr); // 啟動時也使用有動畫的載入
+        };
+    </script>
+</body>
+
+</html>
